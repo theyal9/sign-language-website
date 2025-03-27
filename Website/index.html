@@ -1,0 +1,120 @@
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+        <title> SignLanguage Website </title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+        <link rel="stylesheet" type="text/css" href="css/index.css">
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet"/>
+    </head>
+    <body class="font-roboto bg-purple-500">
+        <header class="fixed w-full top-0 left-0 z-50 transition-all duration-300 bg-transparent text-black">
+            <div class="container mx-auto px-4 py-2 flex justify-between items-center">
+                <div class="flex items-center">
+                    <img alt="Logo" class="h-8 w-8 mr-2" height="30" src="https://sa1s3optim.patientpop.com/assets/images/provider/photos/2234992.png" width="30"/>
+                    <span class="text-xl font-bold font-[Poppins]"> SignVision </span>
+                </div>
+                <nav class="space-x-4 text-black">
+                    <a class="text-black hover:text-gray-600" href="#home"> Home </a>
+                    <a class="text-black hover:text-gray-600" href="#about"> About </a>
+                    <a class="text-black hover:text-gray-600" href="#learn"> Learn </a>
+                    <a class="text-black hover:text-gray-600" href="#practice"> Practice </a>
+                    <a class="bg-white text-black hover:text-gray-600 border border-gray-300 rounded-full px-4 py-1" href="#model"> Help improve model </a>
+                </nav>
+            </div>
+        </header>
+        <main id="home" class="relative h-screen flex items-center justify-center">
+            <div class="absolute inset-0 flex justify-center items-center">
+                <img alt="Hand showing" class="absolute inset-0 object-cover h-screen w-screen opacity-50" src="https://i.pinimg.com/736x/8f/7a/2a/8f7a2a4da30ea7f53a3b1e0462d2eb25.jpg"/>
+            </div>
+            <div class="relative text-center text-white">
+                <h1 class="text-5xl font-bold"> Sign Language </h1>
+                <p class="mt-4 text-lg"> American Sign Language (ASL) </p>
+                <button class="mt-8 bg-white text-gray-800 font-bold py-2 px-6 rounded-full hover:bg-gray-100 transition-all duration-300 shadow-md hover:shadow-lg"
+                    onclick="document.getElementById('about').scrollIntoView({ behavior: 'smooth' })">
+                    Explore
+                </button>
+            </div>
+        </main>
+        <section id="about" class="min-h-screen bg-sky-600 py-16 relative text-black">
+            <div class="absolute inset-0 flex justify-center items-center">
+                <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-25" src="https://makeitfable.com/wp-content/uploads/2022/02/2022-02-17-Sign-Language.png"/>
+            </div>
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="text-4xl font-bold mb-8">ABOUT</h2>
+                <p class="text-lg max-w-2xl mx-auto">
+                    Learn American Sign Language (ASL) with video tutorials, practice 
+                    your skills and help improve our recognition model.
+                </p>
+                ABOUT
+                Details on website and sign language!
+                Abstract
+            </div>
+        </section>
+        <section id="learn" class="mmin-h-screen bg-indigo-600 relative text-white py-16">
+            <div class="absolute inset-0 flex justify-center items-center">
+                <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://api.upskillstutor.com/news_image/zM/PX/zMPXQRhbUm4cbngEbtGwievF6I7gVDD0BteT8HQF.jpg"/>
+            </div>
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="text-4xl font-bold mb-8">LEARN</h2>
+                <p class="text-lg max-w-2xl mx-auto">
+                    Discover the world of sign language through our interactive platform. 
+                    Learn American Sign Language (ASL) with video tutorials, practice 
+                    your skills, and help improve our recognition model.
+                </p>
+                LEARN
+                Display 10 videos and text --if possible animated
+                <div class="relative text-center text-white">
+                    <button class="mt-8 bg-white text-gray-800 font-bold py-2 px-6 rounded-full">
+                        Start Learning
+                    </button>
+                </div>
+            </div>
+        </section>
+        <section id="practice" class="min-h-screen bg-emerald-800 text-emerald-50 text-slate-900 relative text-white py-16">
+            <div class="absolute inset-0 flex justify-center items-center">
+                <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://www.journee-mondiale.com/en/wp-content/uploads/2024/07/International-Day-of-Sign-Languages.jpg"/>
+            </div>
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="text-4xl font-bold mb-8">PRACTICE</h2>
+                <p class="text-lg max-w-2xl mx-auto">
+                    Discover the world of sign language through our interactive platform. 
+                    Learn American Sign Language (ASL) with video tutorials, practice 
+                    your skills, and help improve our recognition model.
+                </p>
+                PRACTICE
+                Display a video and allow user to choose corresponding text (like mcq) and tells them if correct or not
+                <div class="relative text-center text-white">
+                    <button class="mt-8 bg-white text-gray-800 font-bold py-2 px-6 rounded-full">
+                        Start Practicing
+                    </button>
+                </div>
+            </div>
+        </section>
+        <section id="model" class="relative text-white py-16">
+            <div class="absolute inset-0 flex justify-center items-center">
+                <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://ichef.bbci.co.uk/news/480/cpsprodpb/6A48/production/_108380272_signs.png.webp"/>
+            </div>
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="text-4xl font-bold mb-8">MODEL</h2>
+                <p class="text-lg max-w-2xl mx-auto">
+                    Discover the world of sign language through our interactive platform. 
+                    Learn American Sign Language (ASL) with video tutorials, practice 
+                    your skills, and help improve our recognition model.
+                </p>
+                HELP IMPROVE MODEL
+                User make a sign and model guesses it, model asks for feedback from user, if incorrect, model learns from it.
+                Model will collect user data.
+                TALK ON PRIVACY and DATA COLLECTION
+                SECURITY ISSUES
+                <div class="relative text-center text-white">
+                    <button class="mt-8 bg-white text-gray-800 font-bold py-2 px-6 rounded-full">
+                        Start!
+                    </button>
+                </div>
+            </div>
+        </section>
+        <script src="js/index.js" defer></script>
+    </body>
+</html>

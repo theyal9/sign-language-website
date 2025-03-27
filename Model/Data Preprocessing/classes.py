@@ -4,7 +4,7 @@
 import os
 
 # Configuration
-DATASET_PATH = "../../Dataset"
+DATASET_PATH = "dataset/"
 OUTPUT_FILE = "class_names.txt"
 
 # Extract class names from dataset directory structure

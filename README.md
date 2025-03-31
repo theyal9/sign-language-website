@@ -7,3 +7,7 @@ Data preprocessing:
 2.  Run remove_non_mp4.py to remove videos that are not in mp4 format.
 3.  Run remove_corrupted_mp4.py to delete corrupted videos.
 4.  Run classes.py to extract classes from cleaned dataset.
+
+To run website:
+python main.py
+http://localhost:3000/

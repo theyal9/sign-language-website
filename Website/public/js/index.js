@@ -1,3 +1,15 @@
+// Practice functionality
+let countdownInterval;
+let currentQuestion;
+
+// Sign interpreter - Model Functionality
+let modelInterval;
+
+let predictionActive = false;
+let mediaRecorder; 
+let recordingChunks = []; // Store recorded data
+let cameraStream; // Store the camera stream
+
 window.addEventListener('scroll', function() {
     const header = document.querySelector('header');
     const scrollPosition = window.scrollY;
@@ -45,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Hide learning/practice sections by default
-    // Hide components
     document.getElementById('learning-content').classList.add('hidden');
     document.getElementById('practice-content').classList.add('hidden');
     document.getElementById('model-content').classList.add('hidden');
@@ -91,7 +102,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadVideoCards(page = 1) {
     try {
-        const response = await fetch(`http://localhost:3000/api/videos?page=${page}`);
+        // const response = await fetch(`http://127.0.0.1:3000/api/videos?page=${page}`);
+        // const response = await fetch(`localhost:3000/api/videos?page=${page}`);
+        const response = await fetch(`http://127.0.0.1:3000/api/videos?page=${page}`);
+        // const response = await fetch(`/api/videos?page=${page}`);
+
+        if (!response.ok) { // Check if response is not 2xx
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json(); 
         
         const grid = document.querySelector('#video-grid');
@@ -141,10 +160,6 @@ async function loadVideoCards(page = 1) {
         errorMessage.textContent = 'Failed to load videos. Please try again.';
     }
 }
-
-// Practice functionality
-let countdownInterval;
-let currentQuestion;
 
 document.getElementById('start-practicing')?.addEventListener('click', async () => {
     // Hide other sections
@@ -207,6 +222,9 @@ async function loadPracticeQuestion() {
 }
 
 function handleAnswer(e) {
+    // Clear any existing intervals to prevent multiple countdowns
+    clearInterval(countdownInterval);
+
     const isCorrect = e.target.dataset.correct === 'true';
     const feedback = document.getElementById('feedback');
     const feedbackText = document.getElementById('feedback-text');
@@ -221,14 +239,16 @@ function handleAnswer(e) {
     // Disable all buttons
     document.querySelectorAll('.answer-option').forEach(btn => {
         btn.disabled = true;
+        btn.classList.remove('bg-green-100', 'bg-red-100');
         if(btn.dataset.correct === 'true') {
             btn.classList.add(isCorrect ? 'bg-green-100' : 'bg-red-100');
         }
     });
 
-    // Start countdown for next question
+    // Start fresh countdown
     let countdown = 5;
     const countdownElement = document.getElementById('countdown');
+    countdownElement.textContent = countdown;  // Reset display to 5
     
     countdownInterval = setInterval(() => {
         countdown--;
@@ -240,10 +260,6 @@ function handleAnswer(e) {
         }
     }, 1000);
 }
-
-// let mediaRecorder;
-// let recordedChunks = [];
-let modelInterval;
 
 // Model start button
 document.getElementById('start-model')?.addEventListener('click', (e) => {
@@ -263,44 +279,60 @@ document.getElementById('consent-no').addEventListener('click', () => {
     // Show navigation
     document.querySelector('nav').classList.remove('hidden');
     
-    // Hide learning content
+    // Hide model content
     document.getElementById('model-content').classList.add('hidden');
     document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
 });
 
-let cameraStream;
-let mediaRecorder;
-let recordingChunks = [];
-
 async function startCamera() {
     try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Stop existing streams
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Get new stream
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480 }
+        });
+        
         const video = document.getElementById('camera-feed');
         video.srcObject = cameraStream;
     } catch (error) {
-        console.error('Error accessing camera:', error);
+        console.error('Camera error:', error);
+        alert('Camera access failed. Please enable permissions.');
     }
 }
 
 function startRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        console.warn('Recording already in progress');
+        return;
+    }
+
     recordingChunks = [];
-    mediaRecorder = new MediaRecorder(cameraStream, { mimeType: 'video/webm' });
-    
+    mediaRecorder = new MediaRecorder(cameraStream, { mimeType: 'video/mp4' });
+
     mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordingChunks.push(e.data);
     };
-    
+
     mediaRecorder.start();
 }
 
+// stopRecording function
 async function stopRecording() {
     return new Promise((resolve) => {
-        mediaRecorder.onstop = async () => {
-            const blob = new Blob(recordingChunks, { type: 'video/webm' });
-            const buffer = await blob.arrayBuffer();
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-            resolve(base64);
+        if (!mediaRecorder || mediaRecorder.state !== 'recording') {
+            resolve(null);
+            return;
+        }
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordingChunks, { type: 'video/mp4' });
+            resolve(blob);
         };
+
         mediaRecorder.stop();
     });
 }
@@ -320,19 +352,6 @@ document.getElementById('consent-yes').addEventListener('click', async () => {
     document.getElementById('consent-modal').classList.add('hidden');
 
     try {
-        // const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // const video = document.getElementById('camera-feed');
-        // video.srcObject = stream;
-        
-        // // Setup recording
-        // mediaRecorder = new MediaRecorder(stream, {
-        //     mimeType: 'video/mp4'
-        // });
-        // mediaRecorder.ondataavailable = (e) => recordedChunks.push(e.data);
-        // mediaRecorder.start();
-        
-        // startPredictionCycle();
-
         await startCamera();
         startRecording();
         startPredictionCycle();
@@ -342,91 +361,59 @@ document.getElementById('consent-yes').addEventListener('click', async () => {
 });
 
 async function startPredictionCycle() {
-    let seconds = 5;
-    const timerElement = document.getElementById('countdown-timer');
-    
-    const countdown = setInterval(() => {
-        seconds--;
-        timerElement.textContent = `${seconds}s remaining`;
-    }, 1000);
+    if (predictionActive) return;
+    predictionActive = true;
 
-    // Wait for recording to complete
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    
-    clearInterval(countdown);
-    const videoData = await stopRecording();
-    
-    // Get prediction
-    const response = await fetch('/api/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoData })
-    });
-    
-    const { prediction } = await response.json();
-    showPredictionResult(prediction);
-    
-    // Restart camera
-    await startCamera();
-    startRecording();
-    startPredictionCycle();
-}
-// function startPredictionCycle() {
-//     let seconds = 5;
-//     const timerElement = document.getElementById('countdown-timer');
-    
-//     modelInterval = setInterval(async () => {
-//         seconds--;
-//         timerElement.textContent = `${seconds}s remaining`;
-        
-//         if (seconds <= 0) {
-//             clearInterval(modelInterval);
-//             mediaRecorder.stop();
-            
-//             // Get prediction from model
-//             const prediction = await getModelPrediction();
-//             showPredictionResult(prediction);
-//         }
-//     }, 1000);
-// }
+    try {
+        while (predictionActive) {
+            recordingChunks = [];
+            startRecording();
 
-// Modified prediction flow
-async function getModelPrediction() {
-    const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-    const reader = new FileReader();
-    
-    return new Promise((resolve) => {
-        reader.onloadend = async () => {
-            const base64Data = reader.result.split(',')[1];
-            const response = await fetch('/api/predict', {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            const videoBlob = await stopRecording();
+
+            if (!videoBlob) continue; // Skip if no video recorded
+
+            const formData = new FormData();
+            formData.append('video', videoBlob, 'gesture.mp4');
+
+            const response = await fetch('http://localhost:3000/api/predict', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videoData: base64Data })
+                body: formData,
             });
-            const data = await response.json();
-            resolve(data.prediction);
-        };
-        reader.readAsDataURL(videoBlob);
-    });
+
+            if (!response.ok) throw new Error('Prediction API error');
+
+            const { prediction } = await response.json();
+            showPredictionResult(prediction);
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        console.error('Prediction cycle error:', error);
+    } finally {
+        predictionActive = false;
+    }
 }
 
 function showPredictionResult(prediction) {
     document.getElementById('prediction-text').textContent = prediction;
     document.getElementById('prediction-result').classList.remove('hidden');
+    // Automatically hide after 5 seconds
+    setTimeout(() => {
+        document.getElementById('prediction-result').classList.add('hidden');
+    }, 5000);
 }
 
 // Handle prediction feedback
 document.getElementById('correct-btn').addEventListener('click', async () => {
-    const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-    const reader = new FileReader();
-    reader.readAsDataURL(videoBlob);
-    
-    reader.onloadend = () => {
-        const base64Data = reader.result.split(',')[1];
-        submitDataToServer(base64Data, prediction, prediction);
-    };
-    
-    resetRecognitionCycle();
+    try {
+        const videoData = await stopRecording();
+        await submitDataToServer(videoData, prediction, prediction);
+        resetRecognitionCycle();
+    } catch (error) {
+        console.error('Feedback error:', error);
+    }
 });
 
 document.getElementById('incorrect-btn').addEventListener('click', () => {
@@ -435,33 +422,31 @@ document.getElementById('incorrect-btn').addEventListener('click', () => {
 
 // Modified correction handling
 document.getElementById('submit-correction').addEventListener('click', async () => {
-    const userInput = document.getElementById('correct-word').value.toLowerCase().trim();
+    const userInput = document.getElementById('correct-word').value.trim().toLowerCase();
     
-    // Validate word
-    const validation = await fetch(`/api/validate-word?word=${encodeURIComponent(userInput)}`);
-    const { valid } = await validation.json();
-    
-    if (!valid) {
-        alert('Please enter a valid English word from the dictionary');
-        return;
+    try {
+        // Validate word
+        const validation = await fetch(`/api/validate-word?word=${encodeURIComponent(userInput)}`);
+        const { valid } = await validation.json();
+        
+        if (!valid) {
+            alert('Please enter a valid English word');
+            return;
+        }
+
+        const videoData = await stopRecording();
+        await submitDataToServer(videoData, userInput, prediction);
+        resetRecognitionCycle();
+    } catch (error) {
+        console.error('Correction error:', error);
     }
-
-    // Proceed with storage
-    const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-    const reader = new FileReader();
-    
-    reader.onloadend = () => {
-        const base64Data = reader.result.split(',')[1];
-        submitDataToServer(base64Data, userInput, prediction);
-    };
-    reader.readAsDataURL(videoBlob);
-
-    resetRecognitionCycle();
 });
 
 function resetRecognitionCycle() {
-    recordedChunks = [];
-    mediaRecorder.start();
+    recordingChunks = []; 
+    if (mediaRecorder?.state !== 'recording') {
+        mediaRecorder.start();
+    }
     document.getElementById('correction-input').classList.add('hidden');
     document.getElementById('prediction-result').classList.add('hidden');
     document.getElementById('correct-word').value = '';
@@ -482,6 +467,17 @@ async function submitDataToServer(videoData, correctSign, predictedSign) {
 
 // Stop button handler
 document.getElementById('stop-model').addEventListener('click', () => {
+    predictionActive = false;
+    
+    if (mediaRecorder?.state === 'recording') {
+        mediaRecorder.stop();
+    }
+    
+    // Cleanup media streams
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+
     clearInterval(modelInterval);
     if (mediaRecorder?.state !== 'inactive') {
         mediaRecorder?.stop();

@@ -77,4 +77,4 @@ def real_time_detection(model_path, actions):
 
 if __name__ == "__main__":
     actions = load_actions('../Data Preprocessing/class_names.txt')
-    real_time_detection('convlstm2d_model.h5', actions)  # Updated model filename
+    real_time_detection('convlstm2d_model_smaller_dataset.h5', actions)

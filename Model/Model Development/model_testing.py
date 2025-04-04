@@ -59,7 +59,7 @@ def real_time_detection(model_path, actions):
                 confidence = res[pred_index]
 
                 # Confidence threshold
-                if confidence > 0.7:
+                if confidence > 0.1:
                     predicted_action = actions[pred_index]
                 else:
                     predicted_action = "Uncertain"
@@ -76,5 +76,7 @@ def real_time_detection(model_path, actions):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    # actions = load_actions('../Data Preprocessing/classes_names.txt')
+    # real_time_detection('convlstm2d_model_smaller_dataset.h5', actions)
     actions = load_actions('../Data Preprocessing/class_names.txt')
-    real_time_detection('convlstm2d_model_smaller_dataset.h5', actions)
+    real_time_detection('convlstm2d_model_larger_dataset.h5', actions)

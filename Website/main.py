@@ -16,6 +16,7 @@ from typing import List
 from pydantic import BaseModel
 import uvicorn
 import tempfile
+import time
 
 app = FastAPI()
 
@@ -24,7 +25,9 @@ DATASET_PATH = "../Model/Data Preprocessing/dataset"
 
 # Model Configuration
 mp_holistic = mp.solutions.holistic
-MODEL_PATH = "../Model/Model Development/convlstm2d_model_smaller_dataset.h5"
+# MODEL_PATH = "../Model/Model Development/convlstm2d_model_smaller_dataset.h5"
+# CLASS_NAMES_PATH = "../Model/Data Preprocessing/classes_names.txt"
+MODEL_PATH = "../Model/Model Development/convlstm2d_model_larger_dataset.h5"
 CLASS_NAMES_PATH = "../Model/Data Preprocessing/class_names.txt"
 FEEDBACK_THRESHOLD = 100
 feedback_count = 0
@@ -120,41 +123,6 @@ async def get_practice_video():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/store-data")
-async def store_data(
-    video: UploadFile = File(...),
-    correct_sign: str = Form(...),
-    predicted_sign: str = Form(...)
-):
-    global feedback_count
-    try:
-        target_folder = os.path.join(DATASET_PATH, correct_sign)
-        os.makedirs(target_folder, exist_ok=True)
-        
-        # Save temporary file
-        temp_path = f"temp_{correct_sign}_{video.filename}"
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(video.file, buffer)
-        
-        # Convert to MP4
-        output_path = os.path.join(target_folder, f"user_{correct_sign}_{int(time.time())}.mp4")
-        subprocess.run([
-            "ffmpeg", "-i", temp_path,
-            "-c:v", "copy", "-y", output_path
-        ], check=True)
-        
-        os.remove(temp_path)
-        
-        # Handle retraining
-        feedback_count += 1
-        if feedback_count >= FEEDBACK_THRESHOLD:
-            subprocess.Popen(["python", "model_training.py"])
-            feedback_count = 0
-
-        return {"success": True}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/api/validate-word")
 async def validate_word(word: str):
     try:
@@ -210,14 +178,14 @@ async def predict(video: UploadFile = File(...)):
         # Process video
         input_data = process_video(temp_path)
         if input_data is None:
-            raise HTTPException(status_code=400, detail="Video too short (needs at least 30 frames)")
+            raise HTTPException(status_code=400, detail="Video too short")
 
         # Make prediction
         res = model.predict(input_data)[0]
         pred_index = np.argmax(res)
         confidence = res[pred_index]
 
-        if confidence > 0.7:
+        if confidence > 0.4:
             prediction = actions[pred_index]
         else:
             prediction = "Uncertain"
@@ -232,6 +200,30 @@ async def predict(video: UploadFile = File(...)):
             os.unlink(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/store-data")
+async def store_data(
+    video: UploadFile = File(...),
+    correct_sign: str = Form(...),
+    predicted_sign: str = Form(...)
+):
+    try:
+        # Create target directory
+        target_dir = os.path.join(DATASET_PATH, correct_sign.lower().replace(" ", "_"))
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # Generate unique filename
+        filename = f"{int(time.time())}_{predicted_sign}.mp4"
+        file_path = os.path.join(target_dir, filename)
+        
+        # Save video
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(video.file, f)
+            
+        return JSONResponse(content={"status": "success"})
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 # Mount static directories
 app.mount("/dataset", StaticFiles(directory=DATASET_PATH), name="dataset")
 app.mount("/static", StaticFiles(directory="public"), name="static")

@@ -17,16 +17,18 @@ from pydantic import BaseModel
 import uvicorn
 import tempfile
 import time
+from fastapi import BackgroundTasks
+import subprocess
 
 app = FastAPI()
 
 # Configuration
-DATASET_PATH = "../Model/Data Preprocessing/dataset"
+DATASET_PATH = "../Model/Data Preprocessing/reduced_dataset"
 
 # Model Configuration
 mp_holistic = mp.solutions.holistic
-MODEL_PATH = "../Model/Model Development/model_reduced_dataset.h5"
-CLASS_NAMES_PATH = "../Model/Data Preprocessing/reduced_dataset_class_names.txt"
+MODEL_PATH = "../Model/Model Development/trained_model_reduced_dataset.h5"
+CLASS_NAMES_PATH = "../Model/Data Preprocessing/class_names_reduced_dataset.txt"
 FEEDBACK_THRESHOLD = 100
 feedback_count = 0
 
@@ -183,7 +185,7 @@ async def predict(video: UploadFile = File(...)):
         pred_index = np.argmax(res)
         confidence = res[pred_index]
 
-        if confidence > 0.4:
+        if confidence > 0.3:
             prediction = actions[pred_index]
         else:
             prediction = "Uncertain"
@@ -210,7 +212,7 @@ async def store_data(
         os.makedirs(target_dir, exist_ok=True)
         
         # Generate unique filename
-        filename = f"{int(time.time())}_{predicted_sign}.mp4"
+        filename = f"{int(time.time())}_{correct_sign}.mp4"
         file_path = os.path.join(target_dir, filename)
         
         # Save video
@@ -221,7 +223,32 @@ async def store_data(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@app.get("/api/start-interpreter")
+async def start_interpreter(background_tasks: BackgroundTasks):
+    try:
+        def run_script():
+            try:
+                script_path = os.path.abspath("../Model/Model Development/model_testing.py")
+                result = subprocess.run(
+                    ["python", script_path],
+                    shell=True,
+                    creationflags=subprocess.CREATE_NEW_CONSOLE,
+                    text=True
+                )
+                # Log outputs for debugging
+                print("STDOUT:", result.stdout)
+                print("STDERR:", result.stderr)
+                if result.returncode != 0:
+                    print(f"Script failed with code {result.returncode}")
+            except Exception as e:
+                print(f"Subprocess error: {str(e)}")
+
+        background_tasks.add_task(run_script)
+        return {"status": "Interpreter launched"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static directories
 app.mount("/dataset", StaticFiles(directory=DATASET_PATH), name="dataset")
 app.mount("/static", StaticFiles(directory="public"), name="static")

@@ -1,10 +1,10 @@
+// Javascript file for the website
+
 // Practice functionality
 let countdownInterval;
 let currentQuestion;
 
-// Sign interpreter - Model Functionality
-let modelInterval;
-
+// Model Functionality
 let predictionActive = false;
 let mediaRecorder; 
 let recordingChunks = []; // Store recorded data
@@ -68,10 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide navigation
         document.querySelector('nav').classList.add('hidden');
         
-        document.querySelectorAll('main, section').forEach(el => {
-            if(el.id !== 'learning-content') el.classList.add('hidden');
-        });
-        document.querySelector('nav').classList.add('hidden');
         const learningContent = document.getElementById('learning-content');
         learningContent.classList.remove('hidden');
         learningContent.scrollIntoView({ behavior: 'smooth' });
@@ -93,6 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('practice-content').classList.add('hidden');
         document.getElementById('model-content').classList.add('hidden');
         document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('launch-interpreter')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        console.log("Launching interpreter...");
+        try {
+            const response = await fetch('http://localhost:3000/api/start-interpreter');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            alert('Interpreter window should appear! Check behind your browser.');
+        } catch (error) {
+            console.error('Error:', error);
+            alert(`Failed to launch: ${error.message}`);
+        }
     });
 });
 
@@ -376,9 +385,6 @@ async function startPredictionCycle() {
         if (mediaRecorder?.state === 'recording') {
             await stopRecording();
         }
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-        }
 
         // Stop any existing camera stream
         if (cameraStream) {
@@ -431,26 +437,68 @@ async function startPredictionCycle() {
     }
 }
 
-let feedbackResolver = null;
+// function waitForUserFeedback() {
+//   return new Promise(resolve => {
 
+//     const handleFeedback = () => {
+//       // Cleanup listeners
+//       document.getElementById('correct-btn').removeEventListener('click', handleCorrect);
+//       document.getElementById('incorrect-btn').removeEventListener('click', handleIncorrect);
+//       resolve();
+//     };
+
+//     const handleCorrect = () => handleFeedback();
+//     const handleIncorrect = () => handleFeedback();
+
+//     document.getElementById('correct-btn').addEventListener('click', handleCorrect);
+//     document.getElementById('incorrect-btn').addEventListener('click', handleIncorrect);
+//   });
+// }
 function waitForUserFeedback() {
-  return new Promise(resolve => {
-    feedbackResolver = resolve; // Store resolver reference
+    return new Promise(resolve => {
+        const correctBtn = document.getElementById('correct-btn');
+        const incorrectBtn = document.getElementById('incorrect-btn');
+        const submitBtn = document.getElementById('submit-feedback-btn');
     
-    const handleFeedback = () => {
-      // Cleanup listeners
-      document.getElementById('correct-btn').removeEventListener('click', handleCorrect);
-      document.getElementById('incorrect-btn').removeEventListener('click', handleIncorrect);
-      resolve();
-    };
-
-    const handleCorrect = () => handleFeedback();
-    const handleIncorrect = () => handleFeedback();
-
-    document.getElementById('correct-btn').addEventListener('click', handleCorrect);
-    document.getElementById('incorrect-btn').addEventListener('click', handleIncorrect);
-  });
+        let feedback = null;
+    
+        const handleCorrect = () => {
+            feedback = true;
+            submitBtn.disabled = false;
+        };
+    
+        const handleIncorrect = () => {
+            feedback = false;
+            submitBtn.disabled = false;
+        };
+    
+        const handleSubmit = async () => {
+            if (feedback === null) return;
+    
+            // Cleanup event listeners
+            correctBtn.removeEventListener('click', handleCorrect);
+            incorrectBtn.removeEventListener('click', handleIncorrect);
+            submitBtn.removeEventListener('click', handleSubmit);
+    
+            // Hide buttons individually
+            correctBtn.classList.add('hidden');
+            incorrectBtn.classList.add('hidden');
+            submitBtn.classList.add('hidden');
+    
+            showLoading(); // This function should display your loading spinner
+    
+            // Short delay to ensure UI updates
+            await new Promise(r => setTimeout(r, 100));
+            resolve(feedback);
+        };
+    
+        // Add event listeners
+        correctBtn.addEventListener('click', handleCorrect);
+        incorrectBtn.addEventListener('click', handleIncorrect);
+        submitBtn.addEventListener('click', handleSubmit);
+    });
 }
+  
 
 function showPredictionResult(prediction) {
     document.getElementById('prediction-text').textContent = prediction;
@@ -459,6 +507,7 @@ function showPredictionResult(prediction) {
 
 // Handle prediction feedback
 document.getElementById('correct-btn').addEventListener('click', async () => {
+    document.getElementById('prediction-result').classList.add('hidden');
     // Restart cycle
     startPredictionCycle();
 });
@@ -547,7 +596,6 @@ document.getElementById('stop-model').addEventListener('click', () => {
         cameraStream.getTracks().forEach(track => track.stop());
     }
 
-    clearInterval(modelInterval);
     if (mediaRecorder?.state !== 'inactive') {
         mediaRecorder?.stop();
     }
@@ -556,7 +604,7 @@ document.getElementById('stop-model').addEventListener('click', () => {
     const video = document.getElementById('camera-feed');
     if (video.srcObject) {
         video.srcObject.getTracks().forEach(track => {
-            track.stop();  // This actually stops the camera
+            track.stop();  
         });
         video.srcObject = null;
     }

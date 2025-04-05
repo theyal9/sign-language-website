@@ -1,16 +1,20 @@
 // Javascript file for the website
 
+// Global Variables 
 // Practice functionality
 let countdownInterval;
-let currentQuestion;
+let currentQuestion; 
 
 // Model Functionality
 let predictionActive = false;
 let mediaRecorder; 
-let recordingChunks = []; // Store recorded data
-let cameraStream; // Store the camera stream
+// Store recorded video chunks
+let recordingChunks = [];
+let cameraStream;
 let currentPrediction; 
+let currentVideoBlob = null;
 
+// Sticky Header on Scroll
 window.addEventListener('scroll', function() {
     const header = document.querySelector('header');
     const scrollPosition = window.scrollY;
@@ -24,7 +28,9 @@ window.addEventListener('scroll', function() {
     }
 });
 
+// Navigation click event
 document.addEventListener('DOMContentLoaded', () => {
+    // Handle navigation links
     document.querySelectorAll('nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             document.getElementById('consent-modal').classList.add('hidden');
@@ -43,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Show navigation
                 document.querySelector('nav').classList.remove('hidden');
                 
-                // Scroll to target
+                // Scroll to required section
                 targetSection.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
@@ -52,12 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Hide learning/practice sections by default
+    // Hide sub-sections on load
     document.getElementById('learning-content').classList.add('hidden');
     document.getElementById('practice-content').classList.add('hidden');
     document.getElementById('model-content').classList.add('hidden');
 
     // Start Learning button
+    // It loads the video cards and hides other sections
     document.getElementById('start-learning')?.addEventListener('click', async () => {
         await loadVideoCards();
         // Hide other sections
@@ -73,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
         learningContent.scrollIntoView({ behavior: 'smooth' });
     });
 
+    // Back to Home button event
+    // Button is used to go back to home page from other sections
     document.getElementById('back-to-home')?.addEventListener('click', () => {
         // Show all main sections
         document.querySelectorAll('main, section').forEach(el => {
@@ -91,6 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
     });
 
+    // Interpreter Launch button event
+    // It sends a request to the server to start the interpreter
     document.getElementById('launch-interpreter')?.addEventListener('click', async (e) => {
         e.preventDefault();
         console.log("Launching interpreter...");
@@ -105,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Load video cards from the server
+// It fetches the video data from the server and displays it in a grid format
 async function loadVideoCards(page = 1) {
     try {
         const response = await fetch(`http://127.0.0.1:3000/api/videos?page=${page}`);
@@ -163,6 +176,8 @@ async function loadVideoCards(page = 1) {
     }
 }
 
+// Start practicing button event
+// It hides other sections and loads the first question for practice
 document.getElementById('start-practicing')?.addEventListener('click', async () => {
     // Hide other sections
     document.querySelectorAll('main, section').forEach(el => {
@@ -175,6 +190,8 @@ document.getElementById('start-practicing')?.addEventListener('click', async () 
     await loadPracticeQuestion();
 });
 
+// Stop practicing button event
+// It hides the practice section and shows all other sections
 document.getElementById('stop-practice')?.addEventListener('click', () => {
     // Show all main sections
     document.querySelectorAll('main, section').forEach(el => {
@@ -196,6 +213,8 @@ document.getElementById('stop-practice')?.addEventListener('click', () => {
     clearInterval(countdownInterval);
 });
 
+// Load practice question function
+// It fetches a random question from the server and displays it
 async function loadPracticeQuestion() {
     try {
         const response = await fetch('http://localhost:3000/api/practice-video');
@@ -223,6 +242,8 @@ async function loadPracticeQuestion() {
     }
 }
 
+// Handle answer selection
+// It checks if the selected answer is correct and provides feedback
 function handleAnswer(e) {
     // Clear any existing intervals to prevent multiple countdowns
     clearInterval(countdownInterval);
@@ -252,6 +273,7 @@ function handleAnswer(e) {
     const countdownElement = document.getElementById('countdown');
     countdownElement.textContent = countdown;  // Reset display to 5
     
+    // Start countdown
     countdownInterval = setInterval(() => {
         countdown--;
         countdownElement.textContent = countdown;
@@ -263,13 +285,16 @@ function handleAnswer(e) {
     }, 1000);
 }
 
-// Model start button
+// Model start button event
+// It shows the consent modal and hides other sections
 document.getElementById('start-model')?.addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('consent-modal').classList.remove('hidden');
     document.getElementById('model-content').classList.remove('hidden');
 });
 
+// Consent modal close button event
+// It hides the consent modal and shows all other sections
 document.getElementById('consent-no').addEventListener('click', () => {
     // Show all main sections
     document.querySelectorAll('main, section').forEach(el => {
@@ -286,6 +311,8 @@ document.getElementById('consent-no').addEventListener('click', () => {
     document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
 });
 
+// Start camera function
+// It initializes the camera stream and handles camera feed errors
 async function startCamera() {
     try {
         // Stop existing streams
@@ -306,6 +333,8 @@ async function startCamera() {
     }
 }
 
+// Start recording function
+// It initializes the MediaRecorder and starts recording the camera stream
 function startRecording() {
     
     if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -322,15 +351,18 @@ function startRecording() {
     mediaRecorder.start();
 }
 
-// stopRecording function
+// Stop recording function
+// It stops the MediaRecorder and returns the recorded video as a Blob
 async function stopRecording() {
     return new Promise((resolve, reject) => {
         try {
+            // Check if mediaRecorder is defined and in the correct state
             if (!mediaRecorder || mediaRecorder.state !== 'recording') {
                 resolve(null);
                 return;
             }
 
+            // Stop the MediaRecorder
             mediaRecorder.onstop = () => {
                 try {
                     const blob = new Blob(recordingChunks, { type: 'video/mp4' });
@@ -351,6 +383,8 @@ async function stopRecording() {
     });
 }
 
+// Consent modal event handler
+// It handles the user's consent for camera access and model usage
 document.getElementById('consent-yes').addEventListener('click', async () => {
     // Hide ALL other sections
     document.querySelectorAll('main, section').forEach(el => {
@@ -374,12 +408,12 @@ document.getElementById('consent-yes').addEventListener('click', async () => {
     }
 });
 
-let currentVideoBlob = null;
-
+// Start prediction cycle function
+// It handles the entire prediction process including camera access, recording, and prediction API call
 async function startPredictionCycle() {
     if (predictionActive) return;
     predictionActive = true;
-
+    
     try {
         // Cleanup previous resources
         if (mediaRecorder?.state === 'recording') {
@@ -454,6 +488,9 @@ async function startPredictionCycle() {
 //     document.getElementById('incorrect-btn').addEventListener('click', handleIncorrect);
 //   });
 // }
+
+// Wait for user feedback function
+// It handles the user's feedback on the prediction result and returns the feedback value
 function waitForUserFeedback() {
     return new Promise(resolve => {
         const correctBtn = document.getElementById('correct-btn');
@@ -461,7 +498,7 @@ function waitForUserFeedback() {
         const submitBtn = document.getElementById('submit-feedback-btn');
     
         let feedback = null;
-    
+        
         const handleCorrect = () => {
             feedback = true;
             submitBtn.disabled = false;
@@ -484,9 +521,7 @@ function waitForUserFeedback() {
             correctBtn.classList.add('hidden');
             incorrectBtn.classList.add('hidden');
             submitBtn.classList.add('hidden');
-    
-            showLoading(); // This function should display your loading spinner
-    
+        
             // Short delay to ensure UI updates
             await new Promise(r => setTimeout(r, 100));
             resolve(feedback);
@@ -499,25 +534,30 @@ function waitForUserFeedback() {
     });
 }
   
-
+// Show prediction result function
+// It updates the UI with the prediction result and confidence level
 function showPredictionResult(prediction) {
     document.getElementById('prediction-text').textContent = prediction;
     document.getElementById('prediction-result').classList.remove('hidden');
 }
 
 // Handle prediction feedback
+// It handles the user's feedback on the prediction result and updates the UI accordingly
 document.getElementById('correct-btn').addEventListener('click', async () => {
     document.getElementById('prediction-result').classList.add('hidden');
     // Restart cycle
     startPredictionCycle();
 });
 
+// Handle incorrect prediction
+// It shows the correction input field and hides the prediction result
 document.getElementById('incorrect-btn').addEventListener('click', () => {
     document.getElementById('correction-input').classList.remove('hidden');
     document.getElementById('prediction-result').classList.add('hidden');
 });
 
-// Correction handling
+// Correction handling event
+// It handles the user's correction input and submits it to the server
 document.getElementById('submit-correction').addEventListener('click', async () => {
     const userInput = document.getElementById('correct-word').value.trim().toLowerCase();
     
@@ -556,19 +596,27 @@ document.getElementById('submit-correction').addEventListener('click', async () 
     }
 });
 
+// Reset recognition cycle function
+// It resets the recognition cycle by stopping the current recording and starting a new one
 function resetRecognitionCycle() {
+    // Stop current recording if active
     recordingChunks = []; 
     if (mediaRecorder?.state !== 'recording') {
         mediaRecorder.start();
-    }
+    } 
+    
+    // Hide correction input and prediction result
     document.getElementById('correction-input').classList.add('hidden');
     document.getElementById('prediction-result').classList.add('hidden');
     document.getElementById('correct-word').value = '';
     startPredictionCycle();
 }
 
+// Submit data to server function
+// It sends the recorded video and user feedback to the server for storage
 async function submitDataToServer(videoData, correctSign, predictedSign) {
     try {
+        // Validate input and send data to server
         const formData = new FormData();
         formData.append('video', videoData, 'gesture.mp4');
         formData.append('correct_sign', correctSign);
@@ -583,7 +631,8 @@ async function submitDataToServer(videoData, correctSign, predictedSign) {
     }
 }
 
-// Stop button handler
+// Stop model button event
+// It stops the model prediction and cleans up resources
 document.getElementById('stop-model').addEventListener('click', () => {
     predictionActive = false;
     

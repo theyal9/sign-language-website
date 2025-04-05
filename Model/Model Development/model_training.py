@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     print("Training ConvLSTM2D model...")
     convlstm2d_model = train_convlstm2d(X_train, y_train, actions)
-    convlstm2d_model.save('convlstm2d_model.h5')
+    convlstm2d_model.save('trained_model_reduced_dataset.h5')
     
     print("\nEvaluating ConvLSTM2D model...")
     y_pred = np.argmax(convlstm2d_model.predict(X_test), axis=1)

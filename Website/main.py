@@ -1,4 +1,8 @@
 # main.py
+# FastAPI application for Sign Language Recognition System.
+# Provides endpoints for learning videos, practice, real-time model predictions, and feedback collection.
+
+# Import necessary libraries
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -20,19 +24,18 @@ import time
 from fastapi import BackgroundTasks
 import subprocess
 
+# Initialize FastAPI app
 app = FastAPI()
 
-# Configuration
+# Paths and Configuration
 DATASET_PATH = "../Model/Data Preprocessing/reduced_dataset"
-
-# Model Configuration
-mp_holistic = mp.solutions.holistic
 MODEL_PATH = "../Model/Model Development/trained_model_reduced_dataset.h5"
 CLASS_NAMES_PATH = "../Model/Data Preprocessing/class_names_reduced_dataset.txt"
-FEEDBACK_THRESHOLD = 100
-feedback_count = 0
 
-# Load model and classes at startup
+# MediaPipe and feedback
+mp_holistic = mp.solutions.holistic
+
+# Load model and class names on startup
 @app.on_event("startup")
 async def load_model():
     global model, actions
@@ -40,7 +43,7 @@ async def load_model():
     with open(CLASS_NAMES_PATH, 'r') as f:
         actions = [line.strip() for line in f.readlines()]
 
-# Middleware
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -48,6 +51,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Response models
 class VideoResponse(BaseModel):
     currentPage: int
     totalPages: int
@@ -58,12 +62,15 @@ class PracticeVideoResponse(BaseModel):
     correctAnswer: str
     options: List[str]
 
-# Define a route to serve HTML content
+# Serve landing page HTML
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     with open("public/index.html", encoding="utf-8") as f:
         return f.read()
-    
+
+# Fetch paginated list of learning videos
+# Returns a list of video titles and paths for the current page.
+# Each page contains a 3 videos.
 @app.get("/api/videos", response_model=VideoResponse)
 async def get_videos(page: int = 1):
     try:
@@ -94,6 +101,8 @@ async def get_videos(page: int = 1):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Fetch a random practice video
+# Returns a video, a correct answer and 3 wrong answers.
 @app.get("/api/practice-video", response_model=PracticeVideoResponse)
 async def get_practice_video():
     try:
@@ -123,6 +132,8 @@ async def get_practice_video():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Validate a word using an external dictionary API
+# Returns a boolean indicating if the word is valid or not.
 @app.get("/api/validate-word")
 async def validate_word(word: str):
     try:
@@ -131,6 +142,10 @@ async def validate_word(word: str):
     except:
         return {"valid": False}
 
+# Process video to extract keypoints for model prediction
+# This function reads a video file, processes it using MediaPipe to extract hand landmarks
+# and prepares the data for model input.
+# It returns a numpy array of shape (1, 30, 9, 14, 1) for model prediction.
 def process_video(video_path: str):
     sequence = []
     cap = cv2.VideoCapture(video_path)
@@ -166,6 +181,10 @@ def process_video(video_path: str):
     input_data = np.array(sequence[-30:]).reshape(1, 30, 9, 14, 1)
     return input_data
 
+# Predict the sign language from the video
+# This endpoint accepts a video file, processes it to extract keypoints
+# and uses the trained model to predict the sign language.
+# It returns the predicted sign and its confidence score.
 @app.post("/api/predict")
 async def predict(video: UploadFile = File(...)):
     try:
@@ -200,6 +219,8 @@ async def predict(video: UploadFile = File(...)):
             os.unlink(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
 
+# Store feedback data
+# This endpoint accepts a video file and feedback data (correct sign and predicted sign).
 @app.post("/api/store-data")
 async def store_data(
     video: UploadFile = File(...),
@@ -224,6 +245,8 @@ async def store_data(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Launches Python script for interpreting sign language in a new console window using subprocess.
+# A background task that runs independently of the main FastAPI application.
 @app.get("/api/start-interpreter")
 async def start_interpreter(background_tasks: BackgroundTasks):
     try:
@@ -249,10 +272,11 @@ async def start_interpreter(background_tasks: BackgroundTasks):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Mount static directories
+# Serve static content and dataset
 app.mount("/dataset", StaticFiles(directory=DATASET_PATH), name="dataset")
 app.mount("/static", StaticFiles(directory="public"), name="static")
 app.mount("/", StaticFiles(directory="public", html=True), name="static")
 
+# Development entry point
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=3000, reload=True)

@@ -1,11 +1,20 @@
+<!-- HTML Document for the Website -->
 <html lang="en">
     <head>
         <meta charset="utf-8"/>
         <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
         <title> SignLanguage Website </title>
+
+        <!-- Tailwind CSS -->
         <script src="https://cdn.tailwindcss.com"></script>
+
+        <!-- Font Awesome Icons -->
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+
+        <!-- Custom CSS -->
         <link rel="stylesheet" type="text/css" href="css/styles.css">
+
+        <!-- Google Fonts -->
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Kite+One&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Rationale&display=swap" rel="stylesheet">
@@ -13,11 +22,15 @@
         <link href="https://fonts.googleapis.com/css2?family=Genos&display=swap" rel="stylesheet">
     </head>
     <body class="font-roboto bg-purple-500 text-xl">
+
+        <!-- Header -->
+        <!-- Navigation Bar -->
         <header class="fixed w-full top-0 left-0 z-50 transition-all duration-300 bg-transparent text-black">
             <div class="container mx-auto px-4 py-2 flex justify-between items-center">
                 <div class="flex items-center">
                     <span class="text-xl font-bold font-['Kite_One']"> SignVision </span>
                 </div>
+                <!-- Navigation Links -->
                 <nav class="space-x-4 text-black font-['Gruppo']">
                     <a class="text-black hover:text-gray-600" href="#home"> Home </a>
                     <a class="text-black hover:text-gray-600" href="#about"> About </a>
@@ -30,6 +43,10 @@
                 </nav>
             </div>
         </header>
+
+        <!-- Main Content -->
+        <!-- Home Section -->
+        <!-- This section is the landing page for the website -->
         <main id="home" class="relative h-screen flex items-center justify-center">
             <div class="absolute inset-0 flex justify-center items-center">
                 <img alt="Hand showing" class="absolute inset-0 object-cover h-screen w-screen opacity-50" src="https://i.pinimg.com/736x/8f/7a/2a/8f7a2a4da30ea7f53a3b1e0462d2eb25.jpg"/>
@@ -51,6 +68,9 @@
                 </button>
             </div>
         </main>
+
+        <!-- About Section -->
+        <!-- This section provides information about sign language -->
         <section id="about" class="min-h-screen bg-sky-600 py-16 relative text-black">
             <div class="absolute inset-0 flex justify-center items-center">
                 <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://www.pitara.com/media/sign-language.jpg"/>
@@ -84,7 +104,10 @@
                 </div>
             </div>
         </section>
-        <section id="learn" class="mmin-h-screen bg-indigo-600 relative text-white py-16">
+
+        <!-- Learn Section -->
+        <!-- The text overlay includes a title, description and a button to start learning -->
+        <section id="learn" class="min-h-screen bg-indigo-600 relative text-white py-16">
             <div class="absolute inset-0 flex justify-center items-center">
                 <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://api.upskillstutor.com/news_image/zM/PX/zMPXQRhbUm4cbngEbtGwievF6I7gVDD0BteT8HQF.jpg"/>
             </div>
@@ -102,6 +125,9 @@
                 </div>
             </div>
         </section>
+
+        <!-- Practice Section -->
+        <!-- The text overlay includes a title, description and a button to start practicing  -->
         <section id="practice" class="min-h-screen bg-emerald-800 text-emerald-50 text-slate-900 relative text-white py-16">
             <div class="absolute inset-0 flex justify-center items-center">
                 <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://www.journee-mondiale.com/en/wp-content/uploads/2024/07/International-Day-of-Sign-Languages.jpg"/>
@@ -120,6 +146,9 @@
                 </div>
             </div>
         </section>
+
+        <!-- Model Section -->
+        <!-- The text overlay includes a title, description and a button to start the model -->
         <section id="model" class="relative text-white py-16">
             <div class="absolute inset-0 flex justify-center items-center">
                 <img alt="Hand showing sign language" class="absolute inset-0 object-cover h-screen w-screen opacity-15" src="https://ichef.bbci.co.uk/news/480/cpsprodpb/6A48/production/_108380272_signs.png.webp"/>
@@ -140,6 +169,9 @@
                 </div>
             </div>
         </section>
+
+        <!-- Loads learning content -->
+        <!-- It is hidden by default and will be displayed when the user clicks the "Start Learning" button -->
         <section id="learning-content" class="hidden min-h-screen bg-indigo-600 relative text-white py-16">
             <div class="container mx-auto px-4">
                 <div class="flex justify-between items-center mb-12">
@@ -151,13 +183,16 @@
                
                 <!-- Videos container -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="video-grid">
-                    <!-- Dynamic content will be inserted here by JavaScript -->
+                    <!-- Dynamic content is inserted here -->
                 </div>
                 
                 <!-- Add error message container -->
                 <div id="error-message" class="text-center text-red-200 mt-8 hidden"></div>
             </div>
         </section>      
+
+        <!-- Loads Practice content -->
+        <!-- It is hidden by default and will be displayed when the user clicks the "Start Practicing" button -->
         <section id="practice-content" class="hidden min-h-screen bg-emerald-800 relative text-white py-16">
             <div class="container mx-auto px-4">
                 <div class="flex justify-between items-center mb-10">
@@ -189,12 +224,15 @@
                             </div>
                         </div>
                     </div>
-        
+
                     <!-- Answer Options -->
                     <div id="answer-options" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8"></div>
                 </div>
             </div>
         </section>
+
+        <!-- Loads Model content -->
+        <!-- It is hidden by default and will be displayed when the user clicks the "Start Model" button -->
         <section id="model-content" class="hidden min-h-screen bg-slate-800 relative text-white py-16">
             <div class="container mx-auto px-4">
                 <!-- User Consent -->
@@ -210,6 +248,7 @@
                 </div>
         
                 <!-- Model Interface -->
+                <!-- This section is hidden by default and will be displayed when the user clicks the "Start Model" button -->
                 <div class="hidden" id="model-interface">
                     <div class="flex justify-between items-center mb-12">
                         <h2 class="text-4xl font-bold font-['Rationale']">Sign Recognition</h2>
@@ -218,6 +257,7 @@
                         </button>
                     </div>
                     
+                    <!-- Camera Feed and Prediction Result -->
                     <div class="max-w-4xl mx-auto">
                         <div class="relative aspect-video bg-black rounded-lg overflow-hidden mb-8">
                             <video id="camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
@@ -227,7 +267,7 @@
                         </div>
                         
                         <div id="prediction-result" class="text-center hidden">
-                            <p class="text-3xl mb-6">Model thinks this is: <span id="prediction-text" class="font-bold"></span></p>
+                            <p class="text-3xl mb-6">Predicted word: <span id="prediction-text" class="font-bold"></span></p>
                             <div class="flex justify-center gap-4 mb-8">
                                 <button id="correct-btn" class="px-8 py-3 bg-green-600 rounded-lg">Correct ✅</button>
                                 <button id="incorrect-btn" class="px-8 py-3 bg-red-600 rounded-lg">Incorrect ❌</button>

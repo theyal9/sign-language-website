@@ -25,10 +25,8 @@ DATASET_PATH = "../Model/Data Preprocessing/dataset"
 
 # Model Configuration
 mp_holistic = mp.solutions.holistic
-# MODEL_PATH = "../Model/Model Development/convlstm2d_model_smaller_dataset.h5"
-# CLASS_NAMES_PATH = "../Model/Data Preprocessing/classes_names.txt"
-MODEL_PATH = "../Model/Model Development/convlstm2d_model_larger_dataset.h5"
-CLASS_NAMES_PATH = "../Model/Data Preprocessing/class_names.txt"
+MODEL_PATH = "../Model/Model Development/model_reduced_dataset.h5"
+CLASS_NAMES_PATH = "../Model/Data Preprocessing/reduced_dataset_class_names.txt"
 FEEDBACK_THRESHOLD = 100
 feedback_count = 0
 
@@ -154,7 +152,7 @@ def process_video(video_path: str):
         keypoints = np.concatenate([lh, rh]).reshape(9, 14, 1)
         
         sequence.append(keypoints)
-        sequence = sequence[-30:]  # Maintain 30-frame sequence
+        sequence = sequence[-30:] 
 
     cap.release()
     holistic.close()

@@ -4,8 +4,10 @@
 import os
 
 # Configuration
-DATASET_PATH = "dataset/"
-OUTPUT_FILE = "class_names.txt"
+# DATASET_PATH = "dataset/"
+# OUTPUT_FILE = "class_names.txt"
+DATASET_PATH = "reduced_dataset/"
+OUTPUT_FILE = "reduced_dataset_class_names.txt"
 
 # Extract class names from dataset directory structure
 def extract_class_names(dataset_path):

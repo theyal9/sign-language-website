@@ -27,7 +27,7 @@ def extract_keypoints(results):
     keypoints = np.concatenate([lh, rh])
     
     # Reshape for ConvLSTM2D (9x14 grid as used in training)
-    return keypoints.reshape(9, 14, 1)  # Changed from 6x21 to 9x14
+    return keypoints.reshape(9, 14, 1)
 
 def draw_landmarks(image, results):
     mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
@@ -51,15 +51,15 @@ def real_time_detection(model_path, actions):
             sequence = sequence[-30:]  # Maintain 30-frame sequence
 
             if len(sequence) == 30:
-                # Reshape for model expecting (None, 30, 9, 14, 1)
-                input_data = np.array(sequence).reshape(1, 30, 9, 14, 1)  # Updated shape
+                # Reshape for model
+                input_data = np.array(sequence).reshape(1, 30, 9, 14, 1) 
                 
                 res = model.predict(input_data)[0]
                 pred_index = np.argmax(res)
                 confidence = res[pred_index]
 
                 # Confidence threshold
-                if confidence > 0.1:
+                if confidence > 0.3:
                     predicted_action = actions[pred_index]
                 else:
                     predicted_action = "Uncertain"
@@ -76,7 +76,5 @@ def real_time_detection(model_path, actions):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    # actions = load_actions('../Data Preprocessing/classes_names.txt')
-    # real_time_detection('convlstm2d_model_smaller_dataset.h5', actions)
     actions = load_actions('../Data Preprocessing/class_names.txt')
-    real_time_detection('convlstm2d_model_larger_dataset.h5', actions)
+    real_time_detection('model_reduced_dataset.h5', actions)

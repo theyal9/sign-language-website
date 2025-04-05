@@ -33,25 +33,25 @@ plt.figure(figsize=(20, 18))
 sns.heatmap(cm1, annot=True, fmt='d', cmap='Blues',
             xticklabels=actions1, yticklabels=actions1,
             cbar_kws={'label': 'Count'})
-plt.title('Confusion Matrix (Classes 1–50)')
+plt.title('Confusion Matrix (Classes 1-60)')
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.xticks(rotation=90)
 plt.yticks(rotation=0)
 plt.tight_layout()
-plt.savefig('confusion_matrix_1-50.png', dpi=300, bbox_inches='tight')
+plt.savefig('confusion_matrix_1-60.png', dpi=300, bbox_inches='tight')
 plt.show()
 
-# Plot for next 50 classes
+# Plot for next 60 classes
 plt.figure(figsize=(20, 18))
 sns.heatmap(cm2, annot=True, fmt='d', cmap='Blues',
             xticklabels=actions2, yticklabels=actions2,
             cbar_kws={'label': 'Count'})
-plt.title('Confusion Matrix (Classes 51–100)')
+plt.title('Confusion Matrix (Classes 61-120)')
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.xticks(rotation=90)
 plt.yticks(rotation=0)
 plt.tight_layout()
-plt.savefig('confusion_matrix_51-100.png', dpi=300, bbox_inches='tight')
+plt.savefig('confusion_matrix_61-120.png', dpi=300, bbox_inches='tight')
 plt.show()

@@ -33,11 +33,23 @@ def mediapipe_detection(image, model):
 
 # Function to extract keypoints from the detected hands
 def extract_keypoints(results):
-    # Extract keypoints for the left hand and right hand or return zeros if not detected
-    # Each hand has 21 landmarks, each with x, y, z coordinates
-    lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
-    rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
-    return np.concatenate([lh, rh])
+    # Extract landmarks
+    lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]) if results.left_hand_landmarks else np.zeros((21, 3))
+    rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]) if results.right_hand_landmarks else np.zeros((21, 3))
+    face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]) if results.face_landmarks else np.zeros((468, 3))
+    
+    # Face coordinates (use nose as reference point)
+    if results.face_landmarks:
+        face_point = face[1]
+    else:
+        face_point = np.zeros(3)
+
+    # Compute distances from face point to each hand landmark
+    lh_dist = np.linalg.norm(lh - face_point, axis=1) if lh.any() else np.zeros(21)
+    rh_dist = np.linalg.norm(rh - face_point, axis=1) if rh.any() else np.zeros(21)
+
+    # Flatten all features
+    return np.concatenate([lh.flatten(), rh.flatten(), lh_dist, rh_dist])
 
 # Function to save landmarks and labels to a CSV file
 def save_landmarks(sequences, labels, actions, dataset_path):
@@ -86,7 +98,7 @@ def process_videos(dataset_path):
 
     # Reshape X for ConvLSTM2D input
     # The input shape for ConvLSTM2D is (samples, time_steps, rows, cols, channels)
-    X = X.reshape(X.shape[0], 30, 9, 14, 1) 
+    X = X.reshape(X.shape[0], 30, 12, 14, 1)
 
     save_landmarks(X, y, actions, dataset_path)
     return X, y, actions
@@ -119,7 +131,7 @@ def train_convlstm2d(X_train, y_train, actions):
 
     # Add ConvLSTM2D layers with dropout for regularization and max pooling layer for downsampling
     model.add(ConvLSTM2D(filters=32, kernel_size=(2,2), activation='tanh', padding='same', 
-                         return_sequences=True, input_shape=(30, 9, 14, 1)))
+                         return_sequences=True, input_shape=(30, 12, 14, 1)))
     model.add(MaxPooling3D(pool_size=(1,2,2), padding='same'))
     model.add(TimeDistributed(Dropout(0.3)))
 

@@ -163,10 +163,28 @@ def process_video(video_path: str):
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = holistic.process(image)
         
-        # Extract keypoints
-        lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
-        rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
-        keypoints = np.concatenate([lh, rh]).reshape(9, 14, 1)
+        # # Extract keypoints
+        # lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
+        # rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
+        # keypoints = np.concatenate([lh, rh]).reshape(9, 14, 1)
+        lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]) if results.left_hand_landmarks else np.zeros((21, 3))
+        rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]) if results.right_hand_landmarks else np.zeros((21, 3))
+        
+        # Face coordinates (use nose as reference point)
+        if results.face_landmarks:
+            face = results.face_landmarks.landmark[1]
+            face_coords = np.array([face.x, face.y, face.z])
+        else:
+            face_coords = np.zeros(3)
+
+        # Calculate Euclidean distance of each hand landmark from face
+        lh_dists = np.linalg.norm(lh - face_coords, axis=1) if results.left_hand_landmarks else np.zeros(21)
+        rh_dists = np.linalg.norm(rh - face_coords, axis=1) if results.right_hand_landmarks else np.zeros(21)
+
+        lh = lh.flatten()
+        rh = rh.flatten()
+        
+        keypoints = np.concatenate([lh, rh, lh_dists, rh_dists]).reshape(12, 14, 1)
         
         sequence.append(keypoints)
         sequence = sequence[-30:] 
@@ -178,7 +196,7 @@ def process_video(video_path: str):
         return None
     
     # Prepare input for model
-    input_data = np.array(sequence[-30:]).reshape(1, 30, 9, 14, 1)
+    input_data = np.array(sequence[-30:]).reshape(1, 30, 12, 14, 1)
     return input_data
 
 # Predict the sign language from the video

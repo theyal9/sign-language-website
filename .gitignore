@@ -1,1 +1,3 @@
 Model/Data Preprocessing/dataset
+Model/Data Preprocessing/reduced_dataset/landmarks.csv
+Model/Data Preprocessing/reduced_dataset/landmarks.npy

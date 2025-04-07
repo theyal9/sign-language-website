@@ -14,6 +14,9 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Flatten, GRU, ConvLSTM2D, MaxPooling3D, TimeDistributed, Dropout
 from sklearn.metrics import accuracy_score
 from tensorflow.keras.callbacks import EarlyStopping
+import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report, confusion_matrix
+import seaborn as sns
 
 # Initialize MediaPipe Hands model
 mp_holistic = mp.solutions.holistic
@@ -151,9 +154,9 @@ def train_convlstm2d(X_train, y_train, actions):
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
-    model.fit(X_train, y_train, epochs=100, validation_split=0.2, callbacks=[early_stopping])
+    history = model.fit(X_train, y_train, epochs=100, validation_split=0.2, callbacks=[early_stopping])
 
-    return model
+    return model, history
 
 if __name__ == "__main__":
     # Set the path to the dataset directory
@@ -170,7 +173,7 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05)
 
     print("Training ConvLSTM2D model...")
-    convlstm2d_model = train_convlstm2d(X_train, y_train, actions)
+    convlstm2d_model, history = train_convlstm2d(X_train, y_train, actions)
     convlstm2d_model.save('trained_model_reduced_dataset.h5')
     
     print("\nEvaluating ConvLSTM2D model...")
@@ -189,3 +192,82 @@ if __name__ == "__main__":
 
     # Accuracy Report
     print(f"\nFinal Test Accuracy: {acc*100:.2f}%")
+
+    # Plot accuracy
+    plt.figure(figsize=(10, 5))
+    plt.plot(history.history['accuracy'], label='Train Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Val Accuracy')
+    plt.title('Model Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('training_accuracy.png')
+    plt.show()
+
+    # Plot loss
+    plt.figure(figsize=(10, 5))
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Val Loss')
+    plt.title('Model Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('training_loss.png')
+    plt.show()
+
+    # Classification Report
+    report_dict = classification_report(y_test, y_pred, target_names=actions, output_dict=True)
+    report_df = pd.DataFrame(report_dict).transpose()
+    report_df.to_csv('classification_report.csv', index=True)
+
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, target_names=actions))
+
+    # Confusion Matrix
+    # Extract true and predicted labels
+    y_true = results_df['True_Action']
+    y_pred = results_df['Predicted_Action']
+
+    # Get all actions
+    actions = sorted(results_df['True_Action'].unique())
+
+    # Generate confusion matrix
+    cm = confusion_matrix(y_true, y_pred, labels=actions)
+
+    # Split the labels and matrix into two halves
+    mid = len(actions) // 2
+    actions1 = actions[:mid]
+    actions2 = actions[mid:]
+
+    cm1 = cm[:mid, :mid]
+    cm2 = cm[mid:, mid:]
+
+    # Plot for first 50 classes
+    plt.figure(figsize=(20, 18))
+    sns.heatmap(cm1, annot=True, fmt='d', cmap='Blues',
+                xticklabels=actions1, yticklabels=actions1,
+                cbar_kws={'label': 'Count'})
+    plt.title('Confusion Matrix (Classes 1-60)')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+    plt.savefig('confusion_matrix_1-60.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Plot for next 60 classes
+    plt.figure(figsize=(20, 18))
+    sns.heatmap(cm2, annot=True, fmt='d', cmap='Blues',
+                xticklabels=actions2, yticklabels=actions2,
+                cbar_kws={'label': 'Count'})
+    plt.title('Confusion Matrix (Classes 61-120)')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.xticks(rotation=90)
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+    plt.savefig('confusion_matrix_61-120.png', dpi=300, bbox_inches='tight')
+    plt.show()

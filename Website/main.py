@@ -3,30 +3,26 @@
 # Provides endpoints for learning videos, practice, real-time model predictions, and feedback collection.
 
 # Import necessary libraries
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 import os
 import random
-import subprocess
 import shutil
 import requests
 import cv2
 import numpy as np
 import mediapipe as mp
 import tensorflow as tf
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import WebSocket, WebSocketDisconnect
 from typing import List
 from pydantic import BaseModel
 import uvicorn
 import tempfile
 import time
-from fastapi import BackgroundTasks
-from fastapi import WebSocket, WebSocketDisconnect
-import subprocess
 import asyncio
 import base64
-from collections import deque, Counter
 import pyttsx3
 import threading
 

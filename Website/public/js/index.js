@@ -722,7 +722,7 @@ function liveInterpreter() {
 
         while (isWebSocketActive && interpreterWS.readyState === WebSocket.OPEN) {
             let count = 0;
-            indicator.textContent = "🎬 Capturing...";
+            indicator.textContent = "Capturing...";
 
             const captureInterval = setInterval(() => {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -733,7 +733,7 @@ function liveInterpreter() {
                         indicator.textContent = `Capturing... (${count}/${FRAME_COUNT})`;
                         if (count >= FRAME_COUNT) {
                             clearInterval(captureInterval);
-                            indicator.textContent = "🧠 Processing...";
+                            indicator.textContent = "Processing...";
                         }
                     }
                 }, 'image/jpeg', 0.7);

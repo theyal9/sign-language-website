@@ -22,7 +22,13 @@ import uvicorn
 import tempfile
 import time
 from fastapi import BackgroundTasks
+from fastapi import WebSocket, WebSocketDisconnect
 import subprocess
+import asyncio
+import base64
+from collections import deque, Counter
+import pyttsx3
+import threading
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -34,6 +40,9 @@ CLASS_NAMES_PATH = "../Model/Data Preprocessing/class_names_reduced_dataset.txt"
 
 # MediaPipe and feedback
 mp_holistic = mp.solutions.holistic
+
+# Global flag to track if TTS is active
+is_speaking = threading.Lock()
 
 # Load model and class names on startup
 @app.on_event("startup")
@@ -143,7 +152,7 @@ async def validate_word(word: str):
         return {"valid": False}
 
 # Process video to extract keypoints for model prediction
-# This function reads a video file, processes it using MediaPipe to extract hand landmarks
+# Reads a video file, processes it using MediaPipe to extract hand landmarks
 # and prepares the data for model input.
 # It returns a numpy array of shape (1, 30, 9, 14, 1) for model prediction.
 def process_video(video_path: str):
@@ -163,10 +172,7 @@ def process_video(video_path: str):
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = holistic.process(image)
         
-        # # Extract keypoints
-        # lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
-        # rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
-        # keypoints = np.concatenate([lh, rh]).reshape(9, 14, 1)
+        # Extract keypoints
         lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]) if results.left_hand_landmarks else np.zeros((21, 3))
         rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]) if results.right_hand_landmarks else np.zeros((21, 3))
         
@@ -263,32 +269,136 @@ async def store_data(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Launches Python script for interpreting sign language in a new console window using subprocess.
-# A background task that runs independently of the main FastAPI application.
-@app.get("/api/start-interpreter")
-async def start_interpreter(background_tasks: BackgroundTasks):
-    try:
-        def run_script():
-            try:
-                script_path = os.path.abspath("../Model/Model Development/model_testing.py")
-                result = subprocess.run(
-                    ["python", script_path],
-                    shell=True,
-                    creationflags=subprocess.CREATE_NEW_CONSOLE,
-                    text=True
-                )
-                # Log outputs for debugging
-                print("STDOUT:", result.stdout)
-                print("STDERR:", result.stderr)
-                if result.returncode != 0:
-                    print(f"Script failed with code {result.returncode}")
-            except Exception as e:
-                print(f"Subprocess error: {str(e)}")
+# WebSocket endpoint for real-time sign language recognition
+# This endpoint accepts a video stream, processes it using MediaPipe to extract keypoints,
+# and uses the trained model to predict the sign language in real-time.
+# It returns the predicted sign and its confidence score.
+@app.websocket("/ws/interpreter")
+async def websocket_interpreter(websocket: WebSocket):
+    await websocket.accept()
+    holistic = mp_holistic.Holistic(min_detection_confidence=0.6, min_tracking_confidence=0.7)
 
-        background_tasks.add_task(run_script)
-        return {"status": "Interpreter launched"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    sequence = []
+
+    try:
+        while True:
+            try:
+                # Receive video frame from client
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
+                nparr = np.frombuffer(data, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if frame is None:
+                    continue
+
+                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = holistic.process(image)
+                keypoints = extract_keypoints(results)
+
+                if np.all(keypoints == 0):
+                    await websocket.send_json({
+                        "prediction": "No sign detected",
+                        "confidence": 0.0
+                    })
+                    continue
+
+                sequence.append(keypoints)
+
+                # Limit sequence length to 30 frames
+                if len(sequence) == 30:
+                    smoothed = smooth_sequence(np.array(sequence))
+                    input_data = process_sequence(smoothed)[np.newaxis, ...]
+                    res = model.predict(input_data)[0]
+                    pred_index = np.argmax(res)
+                    confidence = float(res[pred_index])
+                    if confidence > 0.3:
+                        prediction = actions[pred_index] 
+                    else: 
+                        prediction = "Uncertain"
+
+                    # Send prediction and confidence back to client
+                    await websocket.send_json({"prediction": prediction, "confidence": confidence})
+                    speak_action(prediction)
+
+                    await asyncio.sleep(2)  # Wait before next round
+                    sequence.clear()
+            
+            # Handle exceptions
+            except asyncio.TimeoutError:
+                continue
+            except WebSocketDisconnect:
+                print("Client disconnected")
+                break
+            except Exception as e:
+                print(f"Processing error: {e}")
+                break
+    finally:
+        holistic.close()
+
+# Speak the predicted action using TTS
+# Uses pyttsx3 to convert text to speech.
+def speak_action(action):
+    def run_tts():
+        global is_speaking
+        if not is_speaking.acquire(blocking=False):  
+            return
+
+        try:
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 150)  
+            engine.say(action)
+            engine.runAndWait()
+            engine.stop()  # Ensure the engine is stopped after use
+        except Exception as e:
+            print(f"Error in TTS thread: {str(e)}")
+        finally:
+            is_speaking.release()  # Release the lock when done
+
+    if action != "Uncertain":
+        # Start a daemon thread to prevent blocking
+        thread = threading.Thread(target=run_tts, daemon=True)
+        thread.start()
+
+# Smooth the sequence of keypoints using exponential smoothing
+# Takes a sequence of keypoints and applies exponential smoothing to it.
+def smooth_sequence(sequence, alpha=0.3):
+    smoothed = [sequence[0]]
+    for i in range(1, len(sequence)):
+        smoothed.append(alpha * sequence[i] + (1 - alpha) * smoothed[i-1])
+    return np.array(smoothed)
+
+# Process the sequence of keypoints for model input
+# Reshapes the sequence to match the model input shape.
+def process_sequence(sequence):
+    return sequence.reshape(30, 12, 14, 1)
+
+# Extract keypoints from MediaPipe results
+# Extracts left and right hand landmarks, face coordinates,
+def extract_keypoints(results):
+    # Explicit fallbacks for missing landmarks
+    lh = np.zeros(21*3)
+    if results.left_hand_landmarks:
+        lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten()
+    
+    rh = np.zeros(21*3)
+    if results.right_hand_landmarks:
+        rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten()
+    
+    # Handle missing face landmarks
+    face_coords = np.zeros(3)
+    if results.face_landmarks:
+        face = results.face_landmarks.landmark[1]
+        face_coords = np.array([face.x, face.y, face.z])
+    
+    # Calculate distances safely
+    lh_dists = np.zeros(21)
+    if results.left_hand_landmarks:
+        lh_dists = np.linalg.norm(lh.reshape(-1, 3) - face_coords, axis=1)
+    
+    rh_dists = np.zeros(21)
+    if results.right_hand_landmarks:
+        rh_dists = np.linalg.norm(rh.reshape(-1, 3) - face_coords, axis=1)
+    
+    return np.concatenate([lh, rh, lh_dists, rh_dists])
 
 # Serve static content and dataset
 app.mount("/dataset", StaticFiles(directory=DATASET_PATH), name="dataset")

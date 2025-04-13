@@ -287,6 +287,41 @@
                 </div>
             </div>
         </section>
+
+                <!-- Live Interpreter Section -->
+        <!-- This section is hidden by default and will be displayed when the user clicks the "Open Interpreter" button -->
+        <section id="live-interpreter" class="hidden min-h-screen bg-gray-800 relative text-white py-16">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-between items-center mb-12">
+                    <h2 class="text-4xl font-bold font-['Rationale']">Live Interpreter</h2>
+                    <button id="stop-interpreter" class="bg-white text-gray-800 font-bold py-2 px-6 rounded-full hover:bg-gray-100">
+                        Stop Interpreter
+                    </button>
+                </div>
+                
+                <!-- Camera Feed and Predictions -->
+                <div class="max-w-4xl mx-auto">
+                    <div class="relative aspect-video bg-black rounded-lg overflow-hidden mb-8">
+                        <video id="live-camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
+                        <div id="live-prediction" class="absolute bottom-4 left-4 bg-black/50 p-4 rounded-lg text-2xl font-bold"></div>
+                    </div>
+
+                    <!-- Capturing Indicator -->
+                    <div id="capturing-indicator" class="rounded-lg text-2xl font-bold text-sm text-gray-500 italic mt-2">Capturing...</div>
+                    
+                    <!-- Confidence Meter -->
+                    <div class="bg-white/10 p-4 rounded-lg mb-8">
+                        <div class="flex items-center justify-between mb-2">
+                            <span>Confidence Level:</span>
+                            <span id="confidence-value">0%</span>
+                        </div>
+                        <div class="h-2 bg-gray-600 rounded-full">
+                            <div id="confidence-bar" class="h-full bg-green-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
         <script src="js/index.js" defer></script>
     </body>
 </html>

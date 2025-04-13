@@ -14,6 +14,11 @@ let cameraStream;
 let currentPrediction; 
 let currentVideoBlob = null;
 
+// WebSocket connection for live interpreter
+let interpreterWS;
+let liveCameraStream;
+let isWebSocketActive = false;
+
 // Sticky Header on Scroll
 window.addEventListener('scroll', function() {
     const header = document.querySelector('header');
@@ -101,19 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Interpreter Launch button event
-    // It sends a request to the server to start the interpreter
+    // It sends a request to the server to start the live interpreter
     document.getElementById('launch-interpreter')?.addEventListener('click', async (e) => {
         e.preventDefault();
-        console.log("Launching interpreter...");
-        try {
-            const response = await fetch('http://localhost:3000/api/start-interpreter');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            alert('Interpreter window should appear! Check behind your browser.');
-        } catch (error) {
-            console.error('Error:', error);
-            alert(`Failed to launch: ${error.message}`);
-        }
+        await startLiveInterpreter();
     });
+
+    // Add event listener to the "Stop Interpreter" button
+    document.getElementById('stop-interpreter').addEventListener('click', stopLiveInterpreter);
 });
 
 // Load video cards from the server
@@ -471,24 +471,6 @@ async function startPredictionCycle() {
     }
 }
 
-// function waitForUserFeedback() {
-//   return new Promise(resolve => {
-
-//     const handleFeedback = () => {
-//       // Cleanup listeners
-//       document.getElementById('correct-btn').removeEventListener('click', handleCorrect);
-//       document.getElementById('incorrect-btn').removeEventListener('click', handleIncorrect);
-//       resolve();
-//     };
-
-//     const handleCorrect = () => handleFeedback();
-//     const handleIncorrect = () => handleFeedback();
-
-//     document.getElementById('correct-btn').addEventListener('click', handleCorrect);
-//     document.getElementById('incorrect-btn').addEventListener('click', handleIncorrect);
-//   });
-// }
-
 // Wait for user feedback function
 // It handles the user's feedback on the prediction result and returns the feedback value
 function waitForUserFeedback() {
@@ -672,3 +654,154 @@ document.getElementById('stop-model').addEventListener('click', () => {
     document.getElementById('model-content').classList.add('hidden');
     document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
 });
+
+// Function to start live interpreter
+// It initializes the camera stream and sets up a WebSocket connection to the server
+async function startLiveInterpreter() {
+    try {
+        // Hide other sections
+        document.querySelectorAll('main, section').forEach(el => el.classList.add('hidden'));
+        document.getElementById('live-interpreter').classList.remove('hidden');
+        document.querySelector('nav').classList.add('hidden');
+
+        // Start camera
+        liveCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoElement = document.getElementById('live-camera-feed');
+        videoElement.srcObject = liveCameraStream;
+
+        // Setup WebSocket
+        interpreterWS = new WebSocket('ws://localhost:3000/ws/interpreter');
+
+        interpreterWS.onopen = () => {
+            console.log('WebSocket connection established');
+            isWebSocketActive = true; // Set the flag to true when the connection is open
+            liveInterpreter(); // Start capturing frames after the connection is established
+        };
+
+        interpreterWS.onclose = () => {
+            console.log('WebSocket connection closed');
+            isWebSocketActive = false; // Set the flag to false when the connection is closed
+        };
+
+        interpreterWS.onmessage = (event) => {
+            console.log("Message received from WebSocket:", event.data);
+            const { prediction, confidence } = JSON.parse(event.data);
+            updateLivePrediction(prediction, confidence);
+        };
+
+        interpreterWS.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            alert('WebSocket connection error. Please try again.');
+        };
+
+    } catch (error) {
+        console.error('Error starting interpreter:', error);
+        alert(`Error starting interpreter: ${error.message}`);
+    }
+}
+
+// Live Interpreter
+// It captures frames from the camera feed and sends them to the server for prediction
+// It uses a WebSocket connection to send the frames and receive predictions in real-time
+function liveInterpreter() {
+    if (!isWebSocketActive) return; // Prevent capturing if WebSocket is not active
+
+    const video = document.getElementById('live-camera-feed');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const indicator = document.getElementById('capturing-indicator');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const FRAME_COUNT = 30;
+    const INTERVAL = 80;
+
+    async function runCycle() {
+        if (!isWebSocketActive) return; // Prevent capturing if WebSocket is not active
+
+        while (isWebSocketActive && interpreterWS.readyState === WebSocket.OPEN) {
+            let count = 0;
+            indicator.textContent = "🎬 Capturing...";
+
+            const captureInterval = setInterval(() => {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(blob => {
+                    if (blob) {
+                        interpreterWS.send(blob);
+                        count++;
+                        indicator.textContent = `Capturing... (${count}/${FRAME_COUNT})`;
+                        if (count >= FRAME_COUNT) {
+                            clearInterval(captureInterval);
+                            indicator.textContent = "🧠 Processing...";
+                        }
+                    }
+                }, 'image/jpeg', 0.7);
+            }, INTERVAL);
+
+            await new Promise(res => setTimeout(res, 5000));
+        }
+    }
+
+    runCycle();
+}
+
+// Update live prediction display
+function updateLivePrediction(prediction, confidence) {
+    const caption = document.getElementById('live-prediction');
+
+    if (prediction === "No sign detected") {
+        caption.textContent  = "🙋 Waiting for gesture...";
+        caption.style.opacity = 0.6;
+        caption.classList.remove('text-green-500');
+        caption.classList.add('text-yellow-300');
+        return;
+    }
+
+    if (prediction !== "Uncertain") {
+        caption.textContent = prediction;
+        caption.style.opacity = 1;
+        caption.classList.remove('text-yellow-300');
+        caption.classList.add('text-green-500');
+        document.getElementById('confidence-value').textContent = `${Math.round(confidence * 100)}%`;
+        document.getElementById('confidence-bar').style.width = `${Math.round(confidence * 100)}%`;
+        setTimeout(() => {
+            caption.style.opacity = 0;
+        }, 2000);
+    }
+}
+
+// Add stop interpreter functionality
+// Stop live interpreter and return to the landing page
+function stopLiveInterpreter() {
+    console.log("Stopping live interpreter...");
+    isWebSocketActive = false;
+
+    // Close WebSocket connection only if it is open
+    if (interpreterWS && interpreterWS.readyState === WebSocket.OPEN) {
+        interpreterWS.close();
+    }
+    
+    // Stop the camera stream
+    if (liveCameraStream) {
+        liveCameraStream.getTracks().forEach(track => track.stop());
+        liveCameraStream = null;
+    }
+
+    // Show all main sections
+    document.querySelectorAll('main, section').forEach(el => {
+        if(el.id !== 'learning-content' && el.id !== 'practice-content') {
+            el.classList.remove('hidden');
+        }
+    });
+    
+    // Show navigation
+    document.querySelector('nav').classList.remove('hidden');
+    
+    // Hide components
+    document.getElementById('learning-content').classList.add('hidden');
+    document.getElementById('practice-content').classList.add('hidden');
+    document.getElementById('model-content').classList.add('hidden');
+    document.getElementById('live-interpreter').classList.add('hidden');
+    document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
+}

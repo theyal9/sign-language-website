@@ -109,11 +109,6 @@ nav.hidden {
     z-index: 1000;
 }
 
-/* Camera Feed Mirroring */
-#camera-feed {
-    transform: scaleX(-1);
-}
-
 /* Timer */
 #countdown-timer {
     backdrop-filter: blur(10px);
@@ -131,4 +126,27 @@ nav.hidden {
 
 #model-interface {
     display: block !important;
+}
+
+/* Live Prediction Text */
+#live-prediction {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+#prediction-text {
+    transition: color 0.3s ease;
+}
+
+/* Camera Feed Mirroring */
+#camera-feed {
+    transform: scaleX(-1); /* Mirror the camera feed */
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
